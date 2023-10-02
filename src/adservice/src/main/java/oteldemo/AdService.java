@@ -21,7 +21,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
-import io.opentelemetry.instrumentation.annotations.WithSpan;
+import io.opentelemetry.instrumentation.annotations.WithSpan; //annotations
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,6 +36,12 @@ import oteldemo.Demo.AdRequest;
 import oteldemo.Demo.AdResponse;
 import oteldemo.Demo.GetFlagResponse;
 import oteldemo.FeatureFlagServiceGrpc.FeatureFlagServiceBlockingStub;
+
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
+
+import redis.clients.jedis.Jedis;
 
 public final class AdService {
 
@@ -141,6 +147,25 @@ public final class AdService {
 
       // get the current span in context
       Span span = Span.current();
+
+      // Redis
+      String redisHost = "redis-test";
+      int redisPort = 6380;
+
+      Config config = new Config();
+      config.useSingleServer()
+            .setAddress("redis://" + redisHost + ":" + redisPort)
+            .setConnectionMinimumIdleSize(1)
+            .setConnectionPoolSize(10);
+
+      RedissonClient redisson = Redisson.create(config);
+
+      String valueToSet = "EY"; // Valor
+      service.setAndGetRedisHash(valueToSet, redisson); // Span tracing con automatic method annotation
+      service.setRedisKey(valueToSet, redisson); // Span tracing manual instrumentation
+
+      redisson.shutdown();
+
       try {
         List<Ad> allAds = new ArrayList<>();
         AdRequestType adRequestType;
@@ -211,6 +236,44 @@ public final class AdService {
       return response.getFlag().getEnabled();
     }
   }
+
+    private void setRedisKey(String value, RedissonClient redisson) {
+    
+    //build manual span
+    Span span = tracer.spanBuilder("setRedisKey").startSpan();
+    String key = value + "Key";
+
+    try (Scope ignored = span.makeCurrent()){
+      // Envio de attributo por span - ejemplo
+      Span.current().setAttribute("app.redis.test", "123ey");
+      // Set key-value pair en Redis
+      redisson.getBucket(key).set(value);
+    } catch (Exception e) {
+      // Handle any exceptions
+      e.printStackTrace();
+    } finally {
+      span.end();
+    }
+  }
+
+@WithSpan("setAndGetRedisHash") //Build span annotation
+private void setAndGetRedisHash(String value, RedissonClient redisson) {
+
+    String key = value + "Key";
+    String field = value + "Field";
+    String hashKey = key + "Hash";
+    try {
+        // Envio de attributo por span - ejemplo
+        Span.current().setAttribute("app.redis.test2", "456ey");
+        // Perform an HSET ejemplo
+        redisson.getMap(hashKey).fastPut(field, value);
+        // Perform an HGET ejemplo
+        String retrievedValue = (String) redisson.getMap(hashKey).get(field);
+    } catch (Exception e) {
+        // Handle any exceptions
+        e.printStackTrace();
+    }
+}
 
   private static final ImmutableListMultimap<String, Ad> adsMap = createAdsMap();
 

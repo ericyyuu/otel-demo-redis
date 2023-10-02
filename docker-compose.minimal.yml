@@ -36,6 +36,7 @@ services:
       - "${AD_SERVICE_PORT}"
     environment:
       - AD_SERVICE_PORT
+      - REDIS_TEST_ADDR
       - OTEL_EXPORTER_OTLP_ENDPOINT
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       - OTEL_RESOURCE_ATTRIBUTES
@@ -43,6 +44,8 @@ services:
       - OTEL_SERVICE_NAME=adservice
     depends_on:
       otelcol:
+        condition: service_started
+      redis-test:
         condition: service_started
     logging: *logging
 
@@ -457,6 +460,20 @@ services:
       - "${REDIS_PORT}"
     logging: *logging
 
+  # Redis used by test service
+  redis-test:
+    image: redis:alpine
+    container_name: redis-test
+    user: redis
+    deploy:
+      resources:
+        limits:
+          memory: 20M
+    restart: unless-stopped
+    ports:
+      - "${REDIS_TEST_PORT}"
+    command: --port 6380
+    logging: *logging
 
   # ********************
   # Telemetry Components
