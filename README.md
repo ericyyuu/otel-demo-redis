@@ -31,6 +31,6 @@ We welcome any vendor to fork the project to demonstrate their services and
 adding a link below. The community is committed to maintaining the project and
 keeping it up to date for you.
 
-|                                         |                             |                                                                |
-|-----------------------------------------|-----------------------------|----------------------------------------------------------------|
-| [Dynatrace][Dynatrace]                  | [New Relic][NewRelic]       | [Uptrace][Uptrace]                                             |
+|                                         |
+|-----------------------------------------|
+| [Dynatrace](https://www.dynatrace.com/news/blog/opentelemetry-demo-application-with-dynatrace/)|
